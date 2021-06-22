@@ -26,7 +26,7 @@ library(kableExtra)
 library(gridExtra)
 ```
 
-```{r, eval = TRUE}
+```{r, eval = F}
 setwd("/Users/kurisuuu/Downloads")
 focus=read.csv("focus.csv")
 set.seed(1)
