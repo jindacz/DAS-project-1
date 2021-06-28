@@ -1,24 +1,24 @@
 {
-    "id": "294B3201",
-    "path": "~/Downloads/fordfocusmarkdown.Rmd",
+    "id": "9AE3111F",
+    "path": "~/Downloads/focus2.Rmd",
     "project_path": null,
     "type": "r_markdown",
-    "hash": "0",
+    "hash": "3548461202",
     "contents": "",
     "dirty": false,
-    "created": 1624882856133.0,
+    "created": 1624885918601.0,
     "source_on_save": false,
-    "relative_order": 1,
+    "relative_order": 4,
     "properties": {
-        "cursorPosition": "26,0",
-        "scrollLine": "12"
+        "cursorPosition": "346,30",
+        "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1624874266,
+    "lastKnownWriteTime": 1624886051,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1624874266,
+    "last_content_update": 1624886051288,
     "read_only": false,
     "read_only_alternatives": []
 }

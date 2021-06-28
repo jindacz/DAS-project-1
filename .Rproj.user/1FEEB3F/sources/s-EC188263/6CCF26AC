@@ -3,7 +3,7 @@
     "path": "~/Documents/GitHub/DAS-project-1/focus2.Rmd",
     "project_path": "focus2.Rmd",
     "type": "r_markdown",
-    "hash": "805214507",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1624882905628.0,
@@ -12,15 +12,15 @@
     "properties": {
         "tempName": "Untitled1",
         "cursorPosition": "372,3",
-        "scrollLine": "367",
+        "scrollLine": "334",
         "last_setup_crc32": "EC188263462ba30d"
     },
     "folds": "",
-    "lastKnownWriteTime": 1624885663,
+    "lastKnownWriteTime": 1624886051,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1624885663548,
+    "last_content_update": 1624886051,
     "read_only": false,
     "read_only_alternatives": []
 }

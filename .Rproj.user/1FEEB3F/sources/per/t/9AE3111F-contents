@@ -344,7 +344,7 @@ autoplot(lm5)
 ```
 not great
 
-```{r assumptions logm3,eval=FALSE}
+```{r assumptions logm3,eval=T}
 regression.points=get_regression_points(logm3)
 
 ggplot(regression.points, aes(x = age, y = residual)) +
