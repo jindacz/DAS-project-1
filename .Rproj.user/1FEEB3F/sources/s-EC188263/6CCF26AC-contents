@@ -1,0 +1,373 @@
+---
+title: "Ford Focus Price Analysis"
+author: "Xinyi Gao, Yiyang Li, Damien MacFarland, Neha Sinha, Jinda Zhang "
+output: 
+  pdf_document:
+   number_sections: yes
+fig_caption: yes
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,eval=TRUE,warning = FALSE,message = FALSE)
+library(dplyr)
+library(ggplot2)
+library(janitor)
+library(moderndive)
+library(infer)
+library(broom)
+library(kableExtra)
+library(GGally)
+library(skimr)
+library(knitr)
+library(gridExtra)
+```
+
+# Introduction
+
+The dataset contains contains information of price, transmission, mileage, fuel type, road tax, miles per gallon (mpg), and engine size. 500 out of 100,000 data are randomly selected to model the relationship between model price and other explanatory variables.
+
+``` {r 500 sample}
+setwd("/Users/kurisuuu/Downloads")
+focus <- read.csv("focus.csv")
+set.seed(1)
+inds <- sample(1:nrow(focus),500)
+ford.focus <- focus[inds,] %>% 
+  as_tibble() %>% 
+  select(-model) %>% 
+  mutate_if(is.character,as.factor) %>% 
+  mutate(enginefactor=as.factor(engineSize)) %>% 
+  mutate(LogPrice = log(price),LogMileage=log(mileage)) %>% 
+  mutate(age=2021-year) %>% 
+  select(price,everything())
+```
+
+# Exploratory Analysis
+
+Firstly, we use glimpse() in R to investage how the dataset look like.
+```{r view data}
+glimpse(ford.focus)
+```
+
+```{r, eval = TRUE}
+ford.focus %>%
+  summarise(n=n(),Mean=round(mean(price),digits=1), St.Dev=round(sd(price),digits=1),
+    Min=min(price), Q1 = quantile(price,0.25), Median=median(price),
+    Q3 = quantile(price,0.75), Max=max(price)) %>%
+kable(caption = '\\label{tab:price} Summary statistics on
+  price of 500 UK Used Car Data set.') %>%
+kable_styling(latex_options = "hold_position")
+```
+
+Table \ref{tab:price} shows that the summaries of price of 500 UK Used Car Data set. For example the mean price 13480.5 pounds. We also note that the variability in the price as 4784.7 pounds. The messages can be easily seen the in the following boxplot which summarise the distribution of car price.
+
+We can visualize the distribution of price by using summary in the following boxplot.
+```{r boxplot, out.width = '68%', fig.align = "center",fig.cap = "\\label{fig:box} Price of 500 used Ford cars.", fig.pos = 'H'}
+ggplot(ford.focus, aes(y = price)) +
+  geom_boxplot() +
+  labs(x = "Ford", y = "Price",
+    title = "price of 500 UK Used Car Data set")
+```
+
+Then, we use the ggpairs function in the GGally package to generate an
+informative set of graphical and numerical summaries that illuminate the relationships bewteen pairs of variables.
+
+```{r ggpairs of data, fig.align='center',fig.pos="H"}
+ford.focus %>%ggpairs()
+```
+
+* high correlation between price and c(year(+ve),mileage(-ve),logmileage(-ve))
+
+* year and mileage also have high correlation with oneanother
+
+* log of price has very strong correlations with mileage and year and mildly strong correlation with log of mileage
+
+* 2 levels of transmission and both fuel types seem to have the same distribution when compared to other variables so could probably be omitted. third transmission level had very few observations so hard to make judgment on any effects so can omit too.
+
+* engine seize has weak to moderate correlation, keep for now and maybe discard later as we will only have a small number of variables anyway
+
+We futher simplify the dataset by removing transmission, fuelType,year variables.
+
+```{r small data}
+fordfocus <- ford.focus %>% 
+  select(-c(transmission,fuelType,year))
+```
+
+Below is the summary statisics of our reviesed dataset.
+```{r skim}
+my_skim <- skim_with(base = sfl(n = length), numeric = sfl(p0 = NULL, p100 = NULL,
+hist = NULL))
+fordfocus %>% 
+  my_skim() %>% 
+   kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "hold_position")
+  
+```
+
+From summaries we see that engine size, logprice and logmileage are all on same scale now so probably advance with these variables, and year. We can verify that first by looking at plots.
+
+
+
+```{r plots of variables selected for analysis}
+p11 <- ggplot(fordfocus, aes(x=LogMileage,y=LogPrice))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "lm",se=F)
+p21 <- ggplot(fordfocus, aes(x=mileage,y=LogPrice))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method="lm",se=F)
+p31 <- ggplot(fordfocus, aes(x=age,y=LogPrice))+
+  geom_jitter(width = 0.2)+
+  geom_smooth(method = "lm",se=F)
+p41 <- ggplot(fordfocus, aes(x=engineSize,y=LogPrice))+
+  geom_jitter(width=0.02,height=0.02)+
+  geom_smooth(method = "lm",se=F)
+
+p12 <- ggplot(fordfocus, aes(x=LogMileage,y=price))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method = "lm",se=F)
+p22 <- ggplot(fordfocus, aes(x=mileage,y=price))+
+  geom_point(alpha=0.2)+
+  geom_smooth(method="lm",se=F)
+p32 <- ggplot(fordfocus, aes(x=age,y=price))+
+  geom_jitter(width = 0.2)+
+  geom_smooth(method = "lm",se=F)
+p42 <- ggplot(fordfocus, aes(x=engineSize,y=price))+
+   geom_jitter(width=0.02,height=0.02)+
+  geom_smooth(method = "lm",se=F)
+grid.arrange(p11,p12,p21,p22,p31,p32,p41,p42,nrow=4)
+```
+
+* From the plot we may use the model price ~ mileage+enginesize+year or logprice ~ mileage+year+enginesize
+or drop enginesize in both.
+
+* SHOULD WE HAVE YEAR? or should it be years ago/age? as year is relative to present day - it requires further work section. 
+
+* maybe try mileage and engine size since mileage and year are strongly correlated (multicolinarity avoided too)
+
+# Formal Analysis
+
+Tables below show the estimate coefficients and their confidence intervals for their respective models
+
+
+```{r model1}
+lm1 <- lm(data=fordfocus, price~mileage + engineSize)
+stat1 <- glance(lm1)[,c(1,2,5,8,9)]
+
+get_regression_table(lm1) %>% 
+kable(booktabs=TRUE,linesep="",digits=2,caption = "Parameter estimates for model 1") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+```{r model2}
+lm2 <- lm(data = fordfocus,price~mileage)
+stat2 <- glance(lm2)[,c(1,2,5,8,9)]
+
+get_regression_table(lm2)%>% 
+kable(booktabs=TRUE,linesep="",digits=2,caption = "Parameter estimates for model 2") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+```{r model3}
+lm3 <- lm(data=fordfocus, price~age + engineSize)
+stat3 <- glance(lm3)[,c(1,2,5,8,9)]
+
+get_regression_table(lm3)%>% 
+kable(booktabs=TRUE,linesep="",digits=2, caption = "Parameter estimates for model 3") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r model4}
+lm4 <- lm(data=fordfocus, price~age)
+stat4 <- glance(lm4)[,c(1,2,5,8,9)]
+
+get_regression_table(lm4)%>% 
+kable(booktabs=TRUE,linesep="",digits=2, caption = "Parameter estimates for model 4") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r model5}
+lm5 <- lm(data=fordfocus, price~age + engineSize + mileage)
+stat5 <- glance(lm5)[,c(1,2,5,8,9)]
+
+get_regression_table(lm5)%>% 
+kable(booktabs=TRUE,linesep="",digits=2, caption = "Parameter estimates for model 5") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r model6}
+lm6 <- lm(data=fordfocus, price~as.factor(age) + as.factor(engineSize))
+stat6 <- glance(lm6)[,c(1,2,5,8,9)]
+
+get_regression_table(lm6)%>% 
+kable(booktabs=TRUE,linesep="",digits=2, caption = "Parameter estimates for model 6") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+lots of levels of engine size as a factor have 0 in their CI therefore cannot use model 6
+
+```{r model7}
+lm7 <- lm(data=fordfocus, price~as.factor(age) + engineSize)
+stat7 <- glance(lm7)[,c(1,2,5,8,9)]
+
+get_regression_table(lm7)%>% 
+kable(booktabs=TRUE,linesep="",digits=2, caption = "Parameter estimates for model 7") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r model8}
+lm8 <- lm(data=fordfocus, price~as.factor(age) + engineSize + mileage)
+stat8 <- glance(lm8)[,c(1,2,5,8,9)]
+
+get_regression_table(lm8)%>% 
+kable(booktabs=TRUE,linesep="",digits=2, caption = "Parameter estimates for model 8") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r model9}
+lm9 <- lm(data=fordfocus, price~LogMileage + engineSize+age)
+stat9 <- glance(lm9)[,c(1,2,5,8,9)]
+
+get_regression_table(lm9) %>% 
+kable(booktabs=TRUE,linesep="",digits=2,caption = "Parameter estimates for model 9") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+* No coefficient for age =13 as a factor, therefore we could not predict a price for that scenario
+
+* From the below table we would choose 5 
+(age as factors do not work for ages not defined in the model) & 
+(engineSize as factor always contained 0's in its confidence intervals)
+(model 5: 83% Radj, min AIC & BIC)
+nothing gained from logging mileage
+
+```{r table of criterion}
+criterion <- rbind(stat1,stat2,stat3,stat4,stat5,stat6,stat7,stat8,stat9) %>% 
+  mutate(model=c(1:9)) %>% 
+  select(model,everything())
+criterion
+```
+
+## Log models
+```{r logmodel1}
+logm1 <- lm(data=fordfocus, LogPrice~mileage + engineSize)
+logstat1 <- glance(logm1)[,c(1,2,5,8,9)]
+
+get_regression_table(logm1) %>% 
+kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+
+```
+CI for mileage is 0, so drop in this model.
+```{r logmodel2}
+logm2 <- lm(data = fordfocus,LogPrice~mileage)
+logstat2 <- glance(logm2)[,c(1,2,5,8,9)]
+
+get_regression_table(logm2)%>% 
+kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+
+```
+CI for mileage is 0, so we may drop this model.
+```{r logmodel3}
+logm3 <- lm(data=fordfocus, LogPrice~age + engineSize)
+logstat3 <- glance(logm3)[,c(1,2,5,8,9)]
+
+get_regression_table(logm3)%>% 
+kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r logmodel4}
+logm4 <- lm(data=fordfocus, LogPrice~age)
+logstat4 <- glance(logm4)[,c(1,2,5,8,9)]
+
+get_regression_table(logm4)%>% 
+kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r logmodel5}
+logm5 <- lm(data=fordfocus, LogPrice~age + engineSize + mileage)
+logstat5 <- glance(logm5)[,c(1,2,5,8,9)]
+
+get_regression_table(logm5)%>% 
+kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+as above, mileage is 0, try log of mileage
+``` {r logm6}
+logm6 <- lm(data=fordfocus, LogPrice~age+engineSize+LogMileage)
+logstat6 <- glance(logm6)[,c(1,2,5,8,9)]
+
+get_regression_table(logm6)%>% 
+kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r table of criterion for log price}
+criterion.log <- rbind(logstat1,logstat2,logstat3,logstat4,logstat5,logstat6) %>% 
+  mutate(model=c(1:6)) %>% 
+  select(model,everything())
+criterion.log
+```
+* we would select model logm3 from the logs, but only after checking assumptions of model lm5
+87% R, p is significant, negative AIC and BIC????
+No zero's in the confidence intervals, need to explain what confidence intervals infer
+```{r confidence intervals for selected model}
+get_regression_table(logm3)%>% 
+kable(booktabs=TRUE,linesep="",digits=2) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+## check model assumptions
+
+autoplot will not knit, need ggplot or plot, or to add a wrapper
+```{r assumptions lm5,eval=FALSE}
+autoplot(lm5)
+```
+not great
+
+```{r assumptions logm3,eval=FALSE}
+regression.points=get_regression_points(logm3)
+
+ggplot(regression.points, aes(x = age, y = residual)) +
+geom_point() +
+labs(x = "age", y = "Residual") +
+geom_hline(yintercept = 0, col = "blue", size = 1)
+
+ggplot(regression.points, aes(x = engineSize, y = residual)) +
+geom_point() +
+labs(x = "Fitted values", y = "Residual") +
+geom_hline(yintercept = 0, col = "blue", size = 1) 
+
+ggplot(regression.points, aes(x = residual)) +
+geom_histogram(binwidth = 0.05, color = "white") +
+labs(x = "Residual") 
+
+```
+ALL ASSUMPTIONS WORK WELL - I WOULD PROCEDE WITH: lm(data=fordfocus, LogPrice~age + engineSize)
+
+$$\widehat{\mbox{LogPrice}} = \widehat\beta_0 + \widehat\beta_1 \mbox{age} + \widehat\beta_2 \mbox{engineSize}$$
+
+add example of how this works if we have a made up scenario and how changes in explanatory variables affect the outcome variable
+
+# Conclusions {#sec:Conc}
+
+TBD

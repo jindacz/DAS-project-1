@@ -1,0 +1,9 @@
+"0","logm2 <- lm(data = fordfocus,LogPrice~mileage)
+logstat2 <- glance(logm2)[,c(1,2,5,8,9)]
+
+get_regression_table(logm2)%>% 
+kable(booktabs=TRUE,linesep="""",digits=2) %>%
+  kable_styling(latex_options = ""scale_down"") %>%
+  kable_styling(latex_options = ""HOLD_position"")
+"
+"0",""

@@ -1,0 +1,5 @@
+"0","autoplot(lm5)
+"
+"2","Error: Objects of type lm not supported by autoplot.
+[90mRun `rlang::last_error()` to see where the error occurred.[39m
+"

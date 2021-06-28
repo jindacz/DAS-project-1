@@ -1,0 +1,57 @@
+---
+title: "Basic Template"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA)
+```
+
+```{r libraries, echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE}
+library(ggplot2)
+library(ISLR)
+library(plotly)
+library(tidyr)
+library(jtools)
+library(olsrr)
+library(ggfortify)
+library(GGally)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(moderndive)
+library(gapminder)
+library(skimr)
+library(kableExtra)
+library(gridExtra)
+```
+
+```{r, eval = F}
+setwd("/Users/kurisuuu/Downloads")
+focus=read.csv("focus.csv")
+set.seed(1)
+inds <- sample(1:nrow(focus),500) #indices
+
+ford.focus <- focus[inds,] %>% 
+  as_tibble() %>% 
+  select(-model) %>% 
+  mutate_if(is.character,as.factor) %>% 
+  mutate(fuelType=as_factor(fuelType),engineSize=as.numeric(engineSize)) %>% 
+  select(price,everything())
+         
+options(knitr.duplicate.label = "allow")
+```
+
+
+# Introduction {#sec:intro}
+
+# Exploratory Data Analysis {#sec:EDA}
+
+
+
+# Formal Data Analysis {#sec:FDA}
+
+
+
+# Conclusions {#sec:Conc}
+
